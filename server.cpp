@@ -54,10 +54,28 @@ void Servidor::listeningSocket(){
 				    exit(EXIT_FAILURE); 
 				} 
 			//pthread_create(&threads[i], NULL, task );
-    
+        strcpy(buffer, "Conexão realizada!!!\n");
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        strcpy(buffer, "Você esta na pasta:\n");
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        getcwd(buffer, sizeof(buffer) );
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+        strcpy(buffer, "\n");
+
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        
+
         while(1){
-				valread = read( new_socket , buffer, 1024); 
-				//printf("teste %s\n",buffer ); 
+                
+                //printf("teste %s\n",buffer ); 
+                
                 functionSystemFile(buffer, new_socket);
         }
 	 }
