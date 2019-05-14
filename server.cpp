@@ -11,7 +11,7 @@ void Servidor::createSocket(){
     }
 
     //Forcefully attaching socket to the port
-    if(setsockopt(server_fd, SQL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
+    if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
     {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -23,22 +23,46 @@ void Servidor::createSocket(){
 
     cout << "Test port is:" << port;
 
+      
+    // Forcefully attaching socket to the port 8080 
+    if (bind(server_fd, (struct sockaddr *)&address,sizeof(address))<0) 
+    { 
+        perror("bind failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+   
+
 }
 
+
+
 void Servidor::listeningSocket(){
-	 while(true){
-			 if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
-				                   (socklen_t*)&addrlen))<0) 
+    char buffer[1024];
+    int valread;
+    //char *hello = "Hello from server"; 
+	while(true){
+         
+
+           
+        if (listen(server_fd, 3) < 0) { 
+                    perror("listen"); 
+                    exit(EXIT_FAILURE); 
+                } 
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen))<0) 
 				{ 
 				    perror("accept"); 
 				    exit(EXIT_FAILURE); 
 				} 
+			//pthread_create(&threads[i], NULL, task );
+    
+        while(1){
 				valread = read( new_socket , buffer, 1024); 
-				printf("%s\n",buffer ); 
-				send(new_socket , hello , strlen(hello) , 0 ); 
-				printf("Hello message sent\n"); 	
+				//printf("teste %s\n",buffer ); 
+                functionSystemFile(buffer, new_socket);
+        }
 	 }
 }
+
 
 
 int main(){
@@ -46,5 +70,5 @@ int main(){
     Servidor server;
     server.port = 8080;
     server.createSocket();
-	  //server.listeningSocket();
+	server.listeningSocket();
 }
