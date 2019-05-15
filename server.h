@@ -7,6 +7,7 @@
 #include <sys/socket.h> 
 #include <stdlib.h> 
 #include <pthread.h>
+#include <fstream>
 
 
 #include <sys/types.h>
@@ -54,10 +55,10 @@ class Servidor
                 }else if(strncmp(command, "touch", 5) ==0){
                     touchCommand(command, socket);
                 
-                }else if(strncmp(command, "cat", 3) == 0){
+                }else if(strncmp(command, "cat ", 4) == 0){
                     
-                    //catCommand(command, socket);
-                    cout<< "Estou aqui" <<endl;
+                    catCommand(command, socket);
+                    //cout<< "Estou aqui" <<endl;
 
                 }else if(strncmp(command, "ls", 2) == 0){
                     //ls
@@ -167,16 +168,24 @@ class Servidor
         {
              if(strncmp(command, "cat ", 4) == 0){
 
-                FILE *file;
+                FILE * file;
                 char sendMSG[1024];
-
+                
+                char path[1024];
+                getcwd(path, sizeof(path));
+                
+                char test[1024];
                 memmove(command, command + 4, strlen(command));
 
                 cout<< "text.txt" <<endl;
                 cout<< command<<endl;
+                strcat(path,"/");
+                strcat(path, command);
+                cout<<"Aqui"<<endl;
+                cout<<path<<endl;
 
-                file = fopen(command, "r");
-
+                file = fopen("test.txt", "r");
+                
                 if(file == NULL)
                 {
                     memset(sendMSG, 0, sizeof(sendMSG));
@@ -187,6 +196,8 @@ class Servidor
 
                     memset(sendMSG, 0, sizeof(sendMSG));
                     fread(sendMSG, sizeof(char), 1024, file);
+                    
+
                     send(socket, sendMSG, strlen(sendMSG), 0);
 
                 }
