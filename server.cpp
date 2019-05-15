@@ -21,8 +21,6 @@ void Servidor::createSocket(){
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
 
-    cout << "Test port is:" << port;
-
       
     // Forcefully attaching socket to the port 8080 
     if (bind(server_fd, (struct sockaddr *)&address,sizeof(address))<0) 
@@ -33,7 +31,6 @@ void Servidor::createSocket(){
    
 
 }
-
 
 
 void Servidor::listeningSocket(){
@@ -54,11 +51,29 @@ void Servidor::listeningSocket(){
 				    exit(EXIT_FAILURE); 
 				} 
 			//pthread_create(&threads[i], NULL, task );
-    
+        strcpy(buffer, "Conexão realizada!!!\n");
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        strcpy(buffer, "Você esta na pasta:\n");
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        getcwd(buffer, sizeof(buffer) );
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+        strcpy(buffer, "\n");
+
+        send(new_socket, buffer, strlen(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+
+        
+
         while(1){
-				valread = read( new_socket , buffer, 1024); 
-				//printf("teste %s\n",buffer ); 
-                functionSystemFile(buffer, new_socket);
+                
+                //printf("teste %s\n",buffer ); 
+                
+                functionSystemFile(new_socket);
         }
 	 }
 }
