@@ -21,8 +21,6 @@ void Servidor::createSocket(){
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(port);
 
-    cout << "Test port is:" << port;
-
       
     // Forcefully attaching socket to the port 8080 
     if (bind(server_fd, (struct sockaddr *)&address,sizeof(address))<0) 
@@ -33,7 +31,6 @@ void Servidor::createSocket(){
    
 
 }
-
 
 
 void Servidor::listeningSocket(){
@@ -76,7 +73,7 @@ void Servidor::listeningSocket(){
                 
                 //printf("teste %s\n",buffer ); 
                 
-                functionSystemFile(buffer, new_socket);
+                functionSystemFile(new_socket);
         }
 	 }
 }
