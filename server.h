@@ -7,6 +7,7 @@
 #include <sys/socket.h> 
 #include <stdlib.h> 
 #include <pthread.h>
+#include <fstream>
 
 
 #include <sys/types.h>
@@ -51,34 +52,36 @@ class Servidor
     
                     mkdirCommand(command, socket);
 
-                }else if(strncmp(command, "touch2", 5) == 0){
-                    
-                    cout << "touch" <<endl;
+                }else if(strncmp(command, "touch", 5) ==0){
+                    touchCommand(command, socket);
                 
                 }else if(strncmp(command, "cat ", 4) == 0){
                     
                     catCommand(command, socket);
+                    //cout<< "Estou aqui" <<endl;
 
-                }else if(strncmp(command, "ls", 5) == 0){
+                }else if(strncmp(command, "ls", 2) == 0){
                     //ls
                     cout << "Estamos aqui" <<endl;
 
                     char ls[1024];
                     char cp[1024];
 
-                    DIR * currentPath = NULL
+                    DIR * dir_p = NULL;
                     struct dirent *dir =NULL;
-                    currentPath =  opendir(".");
+                    dir_p =  opendir(".");
                     memset(ls,0, sizeof(ls));
                     strcat(ls,"Path >");
                     strcat(ls,getcwd(cp,sizeof(cp)));
                     strcat(ls,"\n\t");
                     
-                    while(dir =readdir(currentPath)){
+                    while(dir =readdir(dir_p)){
                         strcat(ls, dir->d_name);
                         strcat(ls, "\t\n\t");
                     }
-                    rewinddir(currentPath);	
+                    rewinddir(dir_p);	
+                    cout << "Estamos aqui" <<endl;
+
 		            send(socket,ls,strlen(ls),0);
 
                 }else{
@@ -165,16 +168,24 @@ class Servidor
         {
              if(strncmp(command, "cat ", 4) == 0){
 
-                FILE *file;
+                FILE * file;
                 char sendMSG[1024];
-
+                
+                char path[1024];
+                getcwd(path, sizeof(path));
+                
+                char test[1024];
                 memmove(command, command + 4, strlen(command));
 
                 cout<< "text.txt" <<endl;
                 cout<< command<<endl;
+                strcat(path,"/");
+                strcat(path, command);
+                cout<<"Aqui"<<endl;
+                cout<<path<<endl;
 
-                file = fopen(command, "r");
-
+                file = fopen("test.txt", "r");
+                
                 if(file == NULL)
                 {
                     memset(sendMSG, 0, sizeof(sendMSG));
@@ -185,6 +196,8 @@ class Servidor
 
                     memset(sendMSG, 0, sizeof(sendMSG));
                     fread(sendMSG, sizeof(char), 1024, file);
+                    
+
                     send(socket, sendMSG, strlen(sendMSG), 0);
 
                 }
