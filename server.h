@@ -51,34 +51,36 @@ class Servidor
     
                     mkdirCommand(command, socket);
 
-                }else if(strncmp(command, "touch2", 5) == 0){
-                    
-                    cout << "touch" <<endl;
+                }else if(strncmp(command, "touch", 5) ==0){
+                    touchCommand(command, socket);
                 
-                }else if(strncmp(command, "cat ", 4) == 0){
+                }else if(strncmp(command, "cat", 3) == 0){
                     
-                    catCommand(command, socket);
+                    //catCommand(command, socket);
+                    cout<< "Estou aqui" <<endl;
 
-                }else if(strncmp(command, "ls", 5) == 0){
+                }else if(strncmp(command, "ls", 2) == 0){
                     //ls
                     cout << "Estamos aqui" <<endl;
 
                     char ls[1024];
                     char cp[1024];
 
-                    DIR * currentPath = NULL
+                    DIR * dir_p = NULL;
                     struct dirent *dir =NULL;
-                    currentPath =  opendir(".");
+                    dir_p =  opendir(".");
                     memset(ls,0, sizeof(ls));
                     strcat(ls,"Path >");
                     strcat(ls,getcwd(cp,sizeof(cp)));
                     strcat(ls,"\n\t");
                     
-                    while(dir =readdir(currentPath)){
+                    while(dir =readdir(dir_p)){
                         strcat(ls, dir->d_name);
                         strcat(ls, "\t\n\t");
                     }
-                    rewinddir(currentPath);	
+                    rewinddir(dir_p);	
+                    cout << "Estamos aqui" <<endl;
+
 		            send(socket,ls,strlen(ls),0);
 
                 }else{
