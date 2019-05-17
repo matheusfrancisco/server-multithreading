@@ -58,7 +58,6 @@ void Servidor::createSocket(){
 }
 
 void Servidor::listeningSocket(){
-    int valread;
 
 	while(true){
 
@@ -67,8 +66,14 @@ void Servidor::listeningSocket(){
             exit(EXIT_FAILURE); 
         }
 
-        new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
-        pthread_create(&thr, NULL, resolveRequest, (void*) &new_socket);
+        for(int i = 0; i < N; i++){
+            new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+            pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_socket);
+        }
+
+        for(int i = 0; i < N; i++){
+            pthread_join(threads[i], NULL);
+        }
 	 }
 }
 
