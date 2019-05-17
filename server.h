@@ -19,16 +19,20 @@
 
 using namespace std;
 #define PORT 8080
+#define N 5
 
 class Servidor
 {
+
     public:
  	    struct sockaddr_in address;
         int port;
         int new_socket;
         int server_fd;
         int opt = 1; 
-   	    int addrlen = sizeof(address);  
+   	    int addrlen = sizeof(address);
+        pthread_t thr;
+        pthread_t threads[N];
         
         
         static void functionSystemFile( int socket);
@@ -45,6 +49,7 @@ class Servidor
     void rmCommnad();
     static void sendToClient(char* buffer, int socket);
     static void sendString(const char* string, char* buffer, int socket);
+    static void* resolveRequest(void* args);
 
 };
 

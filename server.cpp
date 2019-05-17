@@ -1,5 +1,35 @@
 #include "server.h"
 
+
+
+void* Servidor::resolveRequest(void* args){
+    char buffer[1024];
+    int socket = *((int*) args);
+
+    if (socket < 0){ 
+        perror("accept"); 
+        pthread_exit(NULL); 
+    } 
+
+    strcpy(buffer, "Conexão realizada!!!\n");
+    sendToClient(buffer, socket);
+
+    strcpy(buffer, "Você esta na pasta:\n");
+    sendToClient(buffer, socket);
+
+    getcwd(buffer, sizeof(buffer));
+    sendToClient(buffer, socket);
+
+    strcpy(buffer, "\n");
+    sendToClient(buffer, socket);
+
+    while(1){
+        functionSystemFile(socket);
+    }
+
+    pthread_exit(NULL);
+}
+
 void Servidor::createSocket(){
 
     int addrlen = sizeof(address);
@@ -28,7 +58,6 @@ void Servidor::createSocket(){
 }
 
 void Servidor::listeningSocket(){
-    char buffer[1024];
     int valread;
 
 	while(true){
@@ -36,28 +65,10 @@ void Servidor::listeningSocket(){
         if (listen(server_fd, 3) < 0) { 
             perror("listen"); 
             exit(EXIT_FAILURE); 
-        } 
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen))<0){ 
-            perror("accept"); 
-            exit(EXIT_FAILURE); 
-        } 
-		
-        //pthread_create(&threads[i], NULL, task );
-        strcpy(buffer, "Conexão realizada!!!\n");
-        sendToClient(buffer, new_socket);
-
-        strcpy(buffer, "Você esta na pasta:\n");
-        sendToClient(buffer, new_socket);
-
-        getcwd(buffer, sizeof(buffer));
-        sendToClient(buffer, new_socket);
-
-        strcpy(buffer, "\n");
-        sendToClient(buffer, new_socket);
-
-        while(1){
-            functionSystemFile(new_socket);
         }
+
+        new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+        pthread_create(&thr, NULL, resolveRequest, (void*) &new_socket);
 	 }
 }
 
