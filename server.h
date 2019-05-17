@@ -41,6 +41,7 @@ class Servidor
         static void mkdirCommand(char command[1024], int socket);
         static void touchCommand(char command[1024], int socket);
         static void catCommand(char command[1024] , int socket);
+        static void exitCommand(char command[1024], int socket);
 
     void createSocket();
     void listeningSocket();
