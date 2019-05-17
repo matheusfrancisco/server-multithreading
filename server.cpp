@@ -1,5 +1,36 @@
 #include "server.h"
 
+
+
+void* Servidor::resolveRequest(void* args){
+    char buffer[1024];
+    int socket = *((int*) args);
+
+    if (socket < 0){ 
+        perror("accept"); 
+        pthread_exit(NULL); 
+    } 
+
+    strcpy(buffer, "Connection successfull!\n");
+    sendToClient(buffer, socket);
+
+    strcpy(buffer, "Current directory:\n");
+    sendToClient(buffer, socket);
+
+    getcwd(buffer, sizeof(buffer));
+    sendToClient(buffer, socket);
+
+    strcpy(buffer, "\n");
+    sendToClient(buffer, socket);
+
+    while(1){
+        sendString(">> ", buffer, socket);
+        functionSystemFile(socket);
+    }
+
+    pthread_exit(NULL);
+}
+
 void Servidor::createSocket(){
 
     int addrlen = sizeof(address);
@@ -28,35 +59,21 @@ void Servidor::createSocket(){
 }
 
 void Servidor::listeningSocket(){
-    char buffer[1024];
-    int valread;
 
 	while(true){
 
         if (listen(server_fd, 3) < 0) { 
             perror("listen"); 
             exit(EXIT_FAILURE); 
-        } 
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen))<0){ 
-            perror("accept"); 
-            exit(EXIT_FAILURE); 
-        } 
-		
-        //pthread_create(&threads[i], NULL, task );
-        strcpy(buffer, "Conexão realizada!!!\n");
-        sendToClient(buffer, new_socket);
+        }
 
-        strcpy(buffer, "Você esta na pasta:\n");
-        sendToClient(buffer, new_socket);
+        for(int i = 0; i < N; i++){
+            new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+            pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_socket);
+        }
 
-        getcwd(buffer, sizeof(buffer));
-        sendToClient(buffer, new_socket);
-
-        strcpy(buffer, "\n");
-        sendToClient(buffer, new_socket);
-
-        while(1){
-            functionSystemFile(new_socket);
+        for(int i = 0; i < N; i++){
+            pthread_join(threads[i], NULL);
         }
 	 }
 }
@@ -67,18 +84,13 @@ void Servidor::functionSystemFile( int socket){
 
     int valread = read( socket , command, 1024);
 
-    if(strncmp(command, "mkdir", 5) == 0){
+    if(strncmp(command, "mkdir", 5) == 0)
         mkdirCommand(command, socket);
-    }
-    else if(strncmp(command, "touch", 5) ==0){
+    else if(strncmp(command, "touch", 5) ==0)
         touchCommand(command, socket);
-    }
-    else if(strncmp(command, "cat ", 4) == 0){  
+    else if(strncmp(command, "cat ", 4) == 0) 
         catCommand(command, socket);
-        //cout<< "Estou aqui" <<endl;
-    }
     else if(strncmp(command, "ls", 2) == 0){
-        cout << "Estamos aqui" <<endl;
 
         char ls[1024];
         char cp[1024];
@@ -95,16 +107,16 @@ void Servidor::functionSystemFile( int socket){
             strcat(ls, dir->d_name);
             strcat(ls, "\t\n\t");
         }
-        rewinddir(dir_p);	
-        cout << "Estamos aqui" <<endl;
+        strcat(ls, "\n");
+        rewinddir(dir_p);
 
         send(socket,ls,strlen(ls),0);
 
-    }else{
-        memset(command, 0, sizeof(command));
-        snprintf(command, sizeof(command),"Error 404.\n");
-        sendToClient(command, socket);
     }
+    else if(strncmp(command, "exit", 4) == 0)
+        exitCommand(command, socket);
+    else
+        sendString("Error 404.\n", command, socket);
 }
 
 void Servidor::mkdirCommand(char command[1024], int socket){             
@@ -162,6 +174,15 @@ void Servidor::catCommand(char command[1024], int socket){
         }
         fclose(file);
     }
+}
+
+void Servidor::exitCommand(char command[1024], int socket){
+    if(strncmp(command, "exit", 4) == 0){
+        sendString("Succesfully disconnected from the server. \n", command, socket);
+        pthread_exit(NULL);
+    }
+    else
+        sendString("Error 404.\n", command, socket);
 }
 
 void Servidor::sendToClient(char* buffer, int socket){
