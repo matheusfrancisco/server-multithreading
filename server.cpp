@@ -80,8 +80,11 @@ void Servidor::listeningSocket(){
 }
 
 void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex){
-    
+    char  dir_atual[1024];
     char  command[1024];
+    memset(dir_atual, 0, sizeof(dir_atual));
+
+    getcwd(dir_atual, sizeof(dir_atual));
 
     int valread = read( socket , command, 1024);
 
@@ -105,14 +108,14 @@ void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex){
     }
     else if(strncmp(command, "ls", 2) == 0){
         pthread_mutex_lock(mutex);
-        lsCommand(command, socket);
+        lsCommand(command, socket, dir_atual);
         memset(command, 0, sizeof(command));
         pthread_mutex_unlock(mutex);
     }
     else if(strncmp(command, "exit", 4) == 0)
         exitCommand(command, socket);
-    else if(strncmp(command, "cd ",3) == 0){
-        cdCommand(command, socket);}
+    else if(strncmp(command, "cd ",3) == 0)
+        cdCommand(command, socket, dir_atual);
     else if(strncmp(command, "rm -r",5) ==0){
         pthread_mutex_lock(mutex);
         rmCommand(command, socket);
@@ -183,13 +186,11 @@ void Servidor::catCommand(char command[1024], int socket){
     }
 }
 
-void Servidor::cdCommand(char command[1024], int socket){
+void Servidor::cdCommand(char command[1024], int socket, char dir[1024]){
     if(command[strlen(command)-1] == 10)
         command[strlen(command)-1] = 0x00;
 
     if(strncmp(command, "cd ", 3) == 0){
-            char dir[1024];
-            memset(dir, 0, sizeof(dir));
 
             memmove(command, command + 3, strlen(command));
             chdir(command);
@@ -229,23 +230,23 @@ void Servidor::writCommand(char command[1024], int socket){
         }
 }
 
-void Servidor::lsCommand(char command[1024], int socket){
+void Servidor::lsCommand(char command[1024], int socket, char dir[1024]){
     char ls[1024];
     char cp[1024];
 
     DIR * dir_p = NULL;
-    struct dirent *dir =NULL;
-    dir_p =  opendir(".");
+    struct dirent *directory =NULL;
+    dir_p =  opendir(dir);
     memset(ls,0, sizeof(ls));
     strcat(ls,"\033[1;34mPath >");
     strcat(ls,getcwd(cp,sizeof(cp)));
     strcat(ls,"/\n\t\033[0m");
     
-    while(dir =readdir(dir_p)){
-        if(dir->d_type == 4)
+    while(directory =readdir(dir_p)){
+        if(directory->d_type == 4)
             strcat(ls, "\033[0;33m");
-        strcat(ls, dir->d_name);
-        if(dir->d_type == 4)
+        strcat(ls, directory->d_name);
+        if(directory->d_type == 4)
             strcat(ls, "/\033[0m");
         strcat(ls, "\t\n\t");
     }

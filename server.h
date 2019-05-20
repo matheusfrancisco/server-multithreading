@@ -46,10 +46,10 @@ class Servidor
         static void touchCommand(char command[1024], int socket);
         static void catCommand(char command[1024] , int socket);
         static void exitCommand(char command[1024], int socket);
-        static void cdCommand(char command[1024], int socket);
+        static void cdCommand(char command[1024], int socket, char dir[1024]);
         static void rmCommand(char command[1024], int socket);
         static void writCommand(char command[1024], int socket);
-        static void lsCommand(char command[1024], int socket);
+        static void lsCommand(char command[1024], int socket, char dir[1024]);
         
     void createSocket();
     void listeningSocket();
