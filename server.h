@@ -42,12 +42,15 @@ class Servidor
         static void touchCommand(char command[1024], int socket);
         static void catCommand(char command[1024] , int socket);
         static void exitCommand(char command[1024], int socket);
+        static void cdCommand(char command[1024], int socket);
+        static void rmCommand(char command[1024], int socket);
+        static void writCommand(char command[1024], int socket);
+        
+
 
     void createSocket();
     void listeningSocket();
     void lsCommand();
-    void cdCommand();
-    void rmCommnad();
     static void sendToClient(char* buffer, int socket);
     static void sendString(const char* string, char* buffer, int socket);
     static void* resolveRequest(void* args);
