@@ -45,12 +45,10 @@ class Servidor
         static void cdCommand(char command[1024], int socket);
         static void rmCommand(char command[1024], int socket);
         static void writCommand(char command[1024], int socket);
+        static void lsCommand(char command[1024], int socket);
         
-
-
     void createSocket();
     void listeningSocket();
-    void lsCommand();
     static void sendToClient(char* buffer, int socket);
     static void sendString(const char* string, char* buffer, int socket);
     static void* resolveRequest(void* args);
