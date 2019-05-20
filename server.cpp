@@ -4,28 +4,29 @@
 
 void* Servidor::resolveRequest(void* args){
     char buffer[1024];
-    int socket = *((int*) args);
+    reqArgs request = *((reqArgs*) args);
+    int socket = request.socket;
 
     if (socket < 0){ 
         perror("accept"); 
         pthread_exit(NULL); 
     } 
 
-    strcpy(buffer, "Connection successfull!\n");
+    strcpy(buffer, "\033[0;32mConnection successfull!\033[0m\n");
     sendToClient(buffer, socket);
 
-    strcpy(buffer, "Current directory:\n");
+    strcpy(buffer, "\033[0;34mCurrent directory:\n");
     sendToClient(buffer, socket);
 
     getcwd(buffer, sizeof(buffer));
     sendToClient(buffer, socket);
 
-    strcpy(buffer, "\n");
+    strcpy(buffer, "\033[0m\n");
     sendToClient(buffer, socket);
 
     while(1){
         sendString(">> ", buffer, socket);
-        functionSystemFile(socket);
+        functionSystemFile(socket, request.mutex);
     }
 
     pthread_exit(NULL);
@@ -68,8 +69,8 @@ void Servidor::listeningSocket(){
         }
 
         for(int i = 0; i < N; i++){
-            new_socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
-            pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_socket);
+            new_req.socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+            pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_req);
         }
 
         for(int i = 0; i < N; i++){
@@ -78,58 +79,76 @@ void Servidor::listeningSocket(){
 	 }
 }
 
-void Servidor::functionSystemFile( int socket){
+void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex){
     
     char  command[1024];
 
     int valread = read( socket , command, 1024);
 
     if(strncmp(command, "mkdir", 5) == 0){
+        pthread_mutex_lock(mutex);
         mkdirCommand(command, socket);
         memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
     }
-    else if(strncmp(command, "touch", 5) ==0){
+    else if(strncmp(command, "touch", 5) == 0){
+        pthread_mutex_lock(mutex);
         touchCommand(command, socket);
         memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
     }
-    else if(strncmp(command, "cat ", 4) == 0) 
+    else if(strncmp(command, "cat ", 4) == 0) {
+        pthread_mutex_lock(mutex);
         catCommand(command, socket);
+        memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
+    }
     else if(strncmp(command, "ls", 2) == 0){
+        pthread_mutex_lock(mutex);
         lsCommand(command, socket);
-
+        memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
     }
     else if(strncmp(command, "exit", 4) == 0)
         exitCommand(command, socket);
-    else if(strncmp(command, "cd ",3) == 0)
-        cdCommand(command, socket);
-    else if(strncmp(command, "rm -r",5) ==0)
+    else if(strncmp(command, "cd ",3) == 0){
+        cdCommand(command, socket);}
+    else if(strncmp(command, "rm -r",5) ==0){
+        pthread_mutex_lock(mutex);
         rmCommand(command, socket);
-    else if(strncmp(command, "echo", 4)==0)
+        memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
+    }
+    else if(strncmp(command, "echo", 4)==0){
+        pthread_mutex_lock(mutex);
         writCommand(command,socket);
+        memset(command, 0, sizeof(command));
+        pthread_mutex_unlock(mutex);
+    }
     else
-        sendString("Error 404.\n", command, socket);
+        sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 
 void Servidor::mkdirCommand(char command[1024], int socket){             
     if(strncmp(command, "mkdir", 5) == 0){
         if(system(command) == 0)
-            sendString("Successufly created folder \n", command, socket);
+            sendString("\033[0;32mSuccessufly created folder \033[0m\n", command, socket);
         else
-            sendString("Error 404.\n", command, socket);
+            sendString("\033[0;31mError 404.\033[0m\n", command, socket);
     }
     else
-        sendString("Error 404.\n", command, socket);
+        sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 
 void Servidor::touchCommand(char command[1024], int socket){
     if(strncmp(command, "touch", 5) == 0){
         if(system(command) == 0)
-            sendString("Successufly created file \n", command, socket);
+            sendString("\033[0;32mSuccessufly created file \033[0m\n", command, socket);
         else
-            sendString("Error 404.\n", command, socket);
+            sendString("\033[0;31mError 404.\033[0m\n", command, socket);
     }
     else
-        sendString("Error 404.\n", command, socket);
+        sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 
 void Servidor::catCommand(char command[1024], int socket){
@@ -154,7 +173,7 @@ void Servidor::catCommand(char command[1024], int socket){
         file = fopen(command, "r");
         
         if(file == NULL)
-            sendString("Error 404.\n", sendMSG, socket);
+            sendString("\033[0;31mError 404.\033[0m\n", sendMSG, socket);
         else{
             memset(sendMSG, 0, sizeof(sendMSG));
             fread(sendMSG, sizeof(char), 1024, file);
@@ -175,16 +194,16 @@ void Servidor::cdCommand(char command[1024], int socket){
             memmove(command, command + 3, strlen(command));
             chdir(command);
 
-            sendString("New directory:\n", command, socket);
+            sendString("\033[1;32mNew directory:\n", command, socket);
             
             getcwd(dir, sizeof(dir));
             
             sendToClient(dir, socket);
  
-            sendString("\n", command, socket);     
+            sendString("\n\033[0m", command, socket);     
     }
     else
-        sendString("Error 404.\n", command, socket);
+        sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 void Servidor::rmCommand(char command[1024], int socket){
         if(command[strlen(command)-1] == 10)
@@ -192,9 +211,9 @@ void Servidor::rmCommand(char command[1024], int socket){
 
         if(strncmp(command, "rm -r", 5) == 0){
             if(system(command)==0)
-                sendString("Succesfully removed file. \n", command, socket);
+                sendString("\033[0;32mSuccesfully removed file. \033[0m\n", command, socket);
             else
-                sendString("Error removing file. \n", command, socket);
+                sendString("\033[0;31mError removing file. \033[0m\n", command, socket);
         }
 }
 
@@ -204,7 +223,9 @@ void Servidor::writCommand(char command[1024], int socket){
 
         if(strncmp(command, "echo ", 5) == 0){
             if(system(command)==0)
-                sendString("Successfully write in file. \n", command, socket);
+                sendString("\033[0;32mSuccessfully wrote in file. \033[0m\n", command, socket);
+            else
+                sendString("\033[0;31mError removing file. \033[0m\n", command, socket);
         }
 }
 
@@ -216,14 +237,16 @@ void Servidor::lsCommand(char command[1024], int socket){
     struct dirent *dir =NULL;
     dir_p =  opendir(".");
     memset(ls,0, sizeof(ls));
-    strcat(ls,"Path >");
+    strcat(ls,"\033[1;34mPath >");
     strcat(ls,getcwd(cp,sizeof(cp)));
-    strcat(ls,"\n\t");
+    strcat(ls,"/\n\t\033[0m");
     
     while(dir =readdir(dir_p)){
+        if(dir->d_type == 4)
+            strcat(ls, "\033[0;33m");
         strcat(ls, dir->d_name);
         if(dir->d_type == 4)
-            strcat(ls, "/");
+            strcat(ls, "/\033[0m");
         strcat(ls, "\t\n\t");
     }
     strcat(ls, "\n");
@@ -234,11 +257,11 @@ void Servidor::lsCommand(char command[1024], int socket){
 
 void Servidor::exitCommand(char command[1024], int socket){
     if(strncmp(command, "exit", 4) == 0){
-        sendString("Succesfully disconnected from the server. \n", command, socket);
+        sendString("\033[0;32mSuccesfully disconnected from the server. \033[0m\n", command, socket);
         pthread_exit(NULL);
     }
     else
-        sendString("Error 404.\n", command, socket);
+        sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 
 void Servidor::sendToClient(char* buffer, int socket){
@@ -255,6 +278,8 @@ void Servidor::sendString(const char* string, char* buffer, int socket){
 
 int main(){
     Servidor server;
+    server.new_req.mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init(server.new_req.mutex, NULL);
     server.port = 8080;
     server.createSocket();
 	server.listeningSocket();

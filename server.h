@@ -23,11 +23,15 @@ using namespace std;
 
 class Servidor
 {
+    typedef struct{
+        int socket;
+        pthread_mutex_t* mutex;
+    } reqArgs;
 
     public:
  	    struct sockaddr_in address;
         int port;
-        int new_socket;
+        reqArgs new_req;
         int server_fd;
         int opt = 1; 
    	    int addrlen = sizeof(address);
@@ -35,7 +39,7 @@ class Servidor
         pthread_t threads[N];
         
         
-        static void functionSystemFile( int socket);
+        static void functionSystemFile( int socket, pthread_mutex_t* mutex);
 
         //commands
         static void mkdirCommand(char command[1024], int socket);
