@@ -84,10 +84,14 @@ void Servidor::functionSystemFile( int socket){
 
     int valread = read( socket , command, 1024);
 
-    if(strncmp(command, "mkdir", 5) == 0)
+    if(strncmp(command, "mkdir", 5) == 0){
         mkdirCommand(command, socket);
-    else if(strncmp(command, "touch", 5) ==0)
+        memset(command, 0, sizeof(command));
+    }
+    else if(strncmp(command, "touch", 5) ==0){
         touchCommand(command, socket);
+        memset(command, 0, sizeof(command));
+    }
     else if(strncmp(command, "cat ", 4) == 0) 
         catCommand(command, socket);
     else if(strncmp(command, "ls", 2) == 0){
@@ -115,8 +119,24 @@ void Servidor::functionSystemFile( int socket){
     }
     else if(strncmp(command, "exit", 4) == 0)
         exitCommand(command, socket);
-    else
+    else if(strncmp(command, "cd ",3) == 0){
+        cout<<"Aqui"<<endl;
+
+        cdCommand(command, socket);
+        memset(command, 0, sizeof(command));
+
+    }else if(strncmp(command, "rm -r",5) ==0){
+        rmCommand(command, socket);
+        memset(command, 0, sizeof(command));
+
+    }else if(strncmp(command, "echo", 4)==0){
+        writCommand(command,socket);
+        memset(command, 0, sizeof(command));
+
+    }else{
         sendString("Error 404.\n", command, socket);
+    
+    }
 }
 
 void Servidor::mkdirCommand(char command[1024], int socket){             
@@ -143,8 +163,9 @@ void Servidor::touchCommand(char command[1024], int socket){
 
 void Servidor::catCommand(char command[1024], int socket){
     
-    // TÁ DANDO SEG FAULT AQUI
-    
+    // REMOVENDO ENTER DO FINAL
+    if(command[strlen(command)-1] == 10)
+        command[strlen(command)-1] = 0x00;
     if(strncmp(command, "cat ", 4) == 0){
 
         FILE * file;
@@ -163,17 +184,82 @@ void Servidor::catCommand(char command[1024], int socket){
         cout<<"Aqui"<<endl;
         cout<<path<<endl;
 
-        file = fopen("test.txt", "r");
+        file = fopen(command, "r");
         
-        if(file == NULL)
+        if(file == NULL){
             sendString("Error 404.\n", sendMSG, socket);
+            memset(command, 0, sizeof(command));
+        }
         else{
             memset(sendMSG, 0, sizeof(sendMSG));
             fread(sendMSG, sizeof(char), 1024, file);
             sendToClient(sendMSG, socket);
+            memset(sendMSG, 0, sizeof(sendMSG));
+
         }
         fclose(file);
     }
+}
+
+void Servidor::cdCommand(char command[1024], int socket){
+    if(command[strlen(command)-1] == 10)
+        command[strlen(command)-1] = 0x00;
+
+    if(strncmp(command, "cd ", 3) == 0){
+            char dir[1024];
+            memset(dir, 0, sizeof(dir));
+
+            cout<<"Aqui"<<endl;
+            memmove(command, command + 3, strlen(command));
+            cout <<command<<endl;
+            chdir(command);
+
+            memset(command, 0, sizeof(command));
+            strcpy(command, "New directory:\n");
+            sendToClient(command, socket);
+            
+            getcwd(dir, sizeof(dir));
+            
+            cout<<dir<<endl;
+            sendToClient(dir, socket);
+
+            strcpy(command, "\n");
+            send(socket, command, strlen(command), 0);
+            memset(command, 0, sizeof(command));
+            //sendString("Você entro\n", buffer, socket);
+        
+    }
+    else{
+        sendString("Error 404.\n", command, socket);
+        memset(command, 0, sizeof(command));
+    }
+}
+void Servidor::rmCommand(char command[1024], int socket){
+        if(command[strlen(command)-1] == 10)
+            command[strlen(command)-1] = 0x00;
+
+        if(strncmp(command, "rm -r", 5) == 0){
+            if(system(command)==0){
+                sendString("Succesfully remove file. \n", command, socket);
+                memset(command, 0, sizeof(command));
+
+            }
+        }
+}
+
+void Servidor::writCommand(char command[1024], int socket){
+        if(command[strlen(command)-1] == 10)
+            command[strlen(command)-1] = 0x00;
+
+        if(strncmp(command, "echo ", 5) == 0){
+            if(system(command)==0){
+                memset(command, 0, sizeof(command));
+
+                sendString("Successfully write in file. \n", command, socket);
+                memset(command, 0, sizeof(command));
+
+            }
+        }
 }
 
 void Servidor::exitCommand(char command[1024], int socket){
@@ -194,6 +280,8 @@ void Servidor::sendString(const char* string, char* buffer, int socket){
     memset(buffer, 0, sizeof(buffer));
     strcpy(buffer, string);
     sendToClient(buffer, socket);
+    memset(buffer, 0, sizeof(buffer));
+
 }
 
 int main(){
