@@ -18,7 +18,7 @@ void* Servidor::resolveRequest(void* args){
     strcpy(buffer, "\033[0;34mCurrent directory:\n");
     sendToClient(buffer, socket);
 
-    getcwd(buffer, sizeof(buffer));
+    strcpy(buffer, request.thDir);
     sendToClient(buffer, socket);
 
     strcpy(buffer, "\033[0m\n");
@@ -26,7 +26,7 @@ void* Servidor::resolveRequest(void* args){
 
     while(1){
         sendString(">> ", buffer, socket);
-        functionSystemFile(socket, request.mutex);
+        functionSystemFile(socket, request.mutex, request.thDir);
     }
 
     pthread_exit(NULL);
@@ -38,7 +38,6 @@ void Servidor::createSocket(){
     if((server_fd = socket(AF_INET, SOCK_STREAM, 0))==0){
         perror("socket failed");
         exit(EXIT_FAILURE);
-
     }
 
     //Forcefully attaching socket to the port
@@ -60,6 +59,7 @@ void Servidor::createSocket(){
 }
 
 void Servidor::listeningSocket(){
+    getcwd(stdDir, sizeof(stdDir));
 
 	while(true){
 
@@ -70,6 +70,7 @@ void Servidor::listeningSocket(){
 
         for(int i = 0; i < N; i++){
             new_req.socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+            strcpy(new_req.thDir, stdDir);
             pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_req);
         }
 
@@ -79,12 +80,10 @@ void Servidor::listeningSocket(){
 	 }
 }
 
-void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex){
-    char  dir_atual[1024];
+void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_atual[1024]){
     char  command[1024];
-    memset(dir_atual, 0, sizeof(dir_atual));
 
-    getcwd(dir_atual, sizeof(dir_atual));
+    chdir(dir_atual);
 
     int valread = read( socket , command, 1024);
 
@@ -187,6 +186,7 @@ void Servidor::catCommand(char command[1024], int socket){
 }
 
 void Servidor::cdCommand(char command[1024], int socket, char dir[1024]){
+    char buffer[1024];
     if(command[strlen(command)-1] == 10)
         command[strlen(command)-1] = 0x00;
 
@@ -196,10 +196,12 @@ void Servidor::cdCommand(char command[1024], int socket, char dir[1024]){
             chdir(command);
 
             sendString("\033[1;32mNew directory:\n", command, socket);
+            memset(dir, 0, sizeof(dir));
+            getcwd(buffer, sizeof(buffer));
+            cout<<buffer<<"\n";
             
-            getcwd(dir, sizeof(dir));
-            
-            sendToClient(dir, socket);
+            strcpy(dir, buffer);
+            sendToClient(buffer, socket);
  
             sendString("\n\033[0m", command, socket);     
     }
@@ -235,14 +237,14 @@ void Servidor::lsCommand(char command[1024], int socket, char dir[1024]){
     char cp[1024];
 
     DIR * dir_p = NULL;
-    struct dirent *directory =NULL;
-    dir_p =  opendir(dir);
+    struct dirent *directory = NULL;
+    dir_p =  opendir(".");
     memset(ls,0, sizeof(ls));
     strcat(ls,"\033[1;34mPath >");
-    strcat(ls,getcwd(cp,sizeof(cp)));
+    strcat(ls, dir);
     strcat(ls,"/\n\t\033[0m");
     
-    while(directory =readdir(dir_p)){
+    while(directory = readdir(dir_p)){
         if(directory->d_type == 4)
             strcat(ls, "\033[0;33m");
         strcat(ls, directory->d_name);
@@ -279,6 +281,7 @@ void Servidor::sendString(const char* string, char* buffer, int socket){
 
 int main(){
     Servidor server;
+    getcwd(server.stdDir, sizeof(server.stdDir));
     server.new_req.mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(server.new_req.mutex, NULL);
     server.port = 8080;

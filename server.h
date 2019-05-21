@@ -26,6 +26,7 @@ class Servidor
     typedef struct{
         int socket;
         pthread_mutex_t* mutex;
+        char thDir[1024];
     } reqArgs;
 
     public:
@@ -37,9 +38,9 @@ class Servidor
    	    int addrlen = sizeof(address);
         pthread_t thr;
         pthread_t threads[N];
+        char stdDir[1024];
         
-        
-        static void functionSystemFile( int socket, pthread_mutex_t* mutex);
+        static void functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_atual[1024]);
 
         //commands
         static void mkdirCommand(char command[1024], int socket);
