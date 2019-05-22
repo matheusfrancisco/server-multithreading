@@ -26,7 +26,7 @@ void* Servidor::resolveRequest(void* args){
 
     while(1){
         sendString(">> ", buffer, socket);
-        functionSystemFile(socket, request.mutex, request.thDir);
+        functionSystemFile(socket, request.mutex, request.thDir, request.myThread);
     }
 
     pthread_exit(NULL);
@@ -67,20 +67,20 @@ void Servidor::listeningSocket(){
             perror("listen"); 
             exit(EXIT_FAILURE); 
         }
+        char buffer[1024];
+        new_req.socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
+        sendString("\033[0;33mWaiting for connection...\n\033[0m", buffer, new_req.socket);
+        sem_wait(thread_controller);
+        int threadIndex = getAvailableThread();
+        threads[threadIndex].busy = 1;
+        new_req.myThread = &threads[threadIndex];
+        strcpy(new_req.thDir, stdDir);
+        pthread_create(&threads[threadIndex].thread, NULL, resolveRequest, (void*) &new_req);
 
-        for(int i = 0; i < N; i++){
-            new_req.socket = accept(server_fd, (struct sockaddr *)&address,  (socklen_t*)&addrlen);
-            strcpy(new_req.thDir, stdDir);
-            pthread_create(&threads[i], NULL, resolveRequest, (void*) &new_req);
-        }
-
-        for(int i = 0; i < N; i++){
-            pthread_join(threads[i], NULL);
-        }
 	 }
 }
 
-void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_atual[1024]){
+void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_atual[1024], connection_t* thread){
     char  command[1024];
 
     int valread = read( socket , command, 1024);
@@ -111,7 +111,7 @@ void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_
         pthread_mutex_unlock(mutex);
     }
     else if(strncmp(command, "exit", 4) == 0)
-        exitCommand(command, socket);
+        exitCommand(command, socket, thread);
     else if(strncmp(command, "cd ",3) == 0)
         cdCommand(command, socket, dir_atual);
     else if(strncmp(command, "rm -r",5) ==0){
@@ -197,7 +197,6 @@ void Servidor::cdCommand(char command[1024], int socket, char dir[1024]){
             sendString("\033[1;32mNew directory:\n", command, socket);
             memset(dir, 0, sizeof(dir));
             getcwd(buffer, sizeof(buffer));
-            cout<<buffer<<"\n";
             
             strcpy(dir, buffer);
             sendToClient(buffer, socket);
@@ -257,9 +256,11 @@ void Servidor::lsCommand(char command[1024], int socket, char dir[1024]){
     sendToClient(ls, socket);
 }
 
-void Servidor::exitCommand(char command[1024], int socket){
+void Servidor::exitCommand(char command[1024], int socket, connection_t* thread){
     if(strncmp(command, "exit", 4) == 0){
         sendString("\033[0;32mSuccesfully disconnected from the server. \033[0m\n", command, socket);
+        thread->busy = 0;
+        sem_post(thread->semaphore);
         pthread_exit(NULL);
     }
     else
@@ -278,11 +279,28 @@ void Servidor::sendString(const char* string, char* buffer, int socket){
     memset(buffer, 0, sizeof(buffer));
 }
 
+void Servidor::setThreads(){
+    for(int i = 0; i < N; i++){
+        threads[i].busy = 0;
+        threads[i].semaphore = thread_controller;
+    }
+}
+
+int Servidor::getAvailableThread(){
+    for(int i = 0; i < N; i++){
+        if(threads[i].busy == 0)
+            return i;
+    }
+}
+
 int main(){
     Servidor server;
     getcwd(server.stdDir, sizeof(server.stdDir));
     server.new_req.mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(server.new_req.mutex, NULL);
+    server.thread_controller = (sem_t*) malloc(sizeof(sem_t));
+    sem_init(server.thread_controller, 0, 6);
+    server.setThreads();
     server.port = 8080;
     server.createSocket();
 	server.listeningSocket();
