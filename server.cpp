@@ -83,9 +83,8 @@ void Servidor::listeningSocket(){
 void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_atual[1024]){
     char  command[1024];
 
-    chdir(dir_atual);
-
     int valread = read( socket , command, 1024);
+    chdir(dir_atual);
 
     if(strncmp(command, "mkdir", 5) == 0){
         pthread_mutex_lock(mutex);
@@ -131,7 +130,7 @@ void Servidor::functionSystemFile( int socket, pthread_mutex_t* mutex, char dir_
         sendString("\033[0;31mError 404.\033[0m\n", command, socket);
 }
 
-void Servidor::mkdirCommand(char command[1024], int socket){             
+void Servidor::mkdirCommand(char command[1024], int socket){
     if(strncmp(command, "mkdir", 5) == 0){
         if(system(command) == 0)
             sendString("\033[0;32mSuccessufly created folder \033[0m\n", command, socket);
